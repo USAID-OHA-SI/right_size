@@ -1,6 +1,6 @@
 ##  PROJECT: RIGHT SIZE
 ##  AUTHOR:  A.Chafetz | USAID
-##  PURPOSE: Identify number of sites with multiple partners FY18Q4-FY20Q1
+##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
 ##  UPDATE:  2020-03-18
