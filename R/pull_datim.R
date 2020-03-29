@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2020-03-18
+##  UPDATE:  2020-03-29
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -11,6 +11,7 @@
 library(tidyverse)
 library(Wavelength)
 library(lubridate)
+library(fs)
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
@@ -48,7 +49,8 @@ library(lubridate)
   
   #table for API use
     ctry_list <- left_join(df_lvls, df_uids, by = c("country_name" = "displayName")) %>% 
-      select(operatingunit = name3, operatingunituid = id, countryname = country_name, site_lvl = facility)
+      select(operatingunit = name3, operatingunituid = id, countryname = country_name, 
+             psnu_lvl = prioritization, site_lvl = facility)
     
     rm(df_lvls, df_uids)
 
@@ -64,7 +66,7 @@ library(lubridate)
 # MUNGE -------------------------------------------------------------------
 
   #convert date from CY to FY
-    df <- df %>% 
+    df_clean <- df %>% 
       mutate(Period = Period %>% 
                str_extract("[:alpha:]{3} [:digit:]{4}") %>% 
                str_replace(" ", " 1, ") %>% 
@@ -75,27 +77,52 @@ library(lubridate)
                str_replace("\\.", "Q")) 
   
   #rename columns
-    df <- df %>% 
+    df_clean <- df_clean %>% 
       select(-orglvl_1, -orglvl_2) %>% 
       rename(period = Period,
              operatingunit = orglvl_3, 
-             snu1 = orglvl_4,
              fundingagency = `Funding Agency`,
              facility = `Organisation unit`, 
              mech = `Funding Mechanism`, 
              indicator = `Technical Area`, 
              value = Value) %>%
-      select(period, operatingunit, snu1, starts_with("orglvl"), facility, orgunituid, everything()) 
+      mutate(snu1 = orglvl_4,
+             countryname = case_when(str_detect(operatingunit, "Region") ~ snu1,
+                                     TRUE                                ~ operatingunit))
+  #add psnu lvl to df for renaming purposes
+    df_clean <- ctry_list %>% 
+      select(countryname, psnu_lvl) %>% 
+      left_join(df_clean, ., by = "countryname")
+    
+  #function for renaming psnu by org level
+    rename_psnu <- function(df, lvl){
+      
+      oldname <- paste0("orglvl_", lvl) 
+      
+      df <- df %>% 
+        filter(psnu_lvl == lvl) %>% 
+        rename(psnu = oldname) %>% 
+        select(-contains("lvl"))
+      
+      invisible(df)
+    }
+    
+    df_clean <- map_dfr(unique(ctry_list$psnu_lvl) %>% setdiff(0), 
+                   ~ rename_psnu(df_clean, .x))
+    
+    df_clean <- df_clean %>% 
+      select(period, operatingunit, countryname, snu1, psnu, 
+             facility, orgunituid, everything()) 
   
   #separate mech info
-    df <- df %>% 
+    df_clean <- df_clean %>% 
       mutate(mech = str_replace(mech, "^0000(0|1)", "ZZZ - 0000\\1 -")) %>% 
       separate(mech, c(NA, "mech_code", "mech_name"), extra = "merge", remove = FALSE)
     
-  df <- mutate(df, value = as.numeric(value))
+    df_clean <- mutate(df_clean, value = as.numeric(value))
 
 # EXPORT ------------------------------------------------------------------
 
-  dir.create("Data")
-  write_csv(df, "Data/TX_CURR_IM_Site.csv", na = "")
+  dir_create("Data")
+  write_csv(df_clean, "Data/TX_CURR_IM_Site.csv", na = "")
   
