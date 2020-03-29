@@ -102,7 +102,7 @@ library(ICPIutilities)
     write_csv(df, "Dataout/TXCURR_Flags.csv", na = "")
   
   #all ending sites
-    df_end <- df_full %>% 
+    df_end <- df %>% 
       filter(fundingagency != "Dedupe adjustments Agency",
              flag_end_sitexmech == TRUE,
              period != "FY17Q4")
@@ -117,7 +117,7 @@ library(ICPIutilities)
     write_csv(df_end_out, "Dataout/TXCURR_SiteTransitions_OutofPEPFAR.csv", na = "")
     
   #all multi mechanism sites
-    df_multimechs <- df_full %>% 
+    df_multimechs <- df %>% 
       filter(flag_multimech_site == TRUE) %>% 
       select(orgunituid:flag_multimech_site) 
     
