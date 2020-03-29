@@ -25,6 +25,11 @@ library(ICPIutilities)
     df_org <- df %>% 
       distinct(operatingunit, countryname, snu1, psnu, facility, orgunituid)
     
+  #limit df for analysis
+    df <- df %>% 
+      arrange(operatingunit, orgunituid, period) %>% 
+      select(operatingunit, orgunituid, period, mech_code, fundingagency, value)
+    
   #flag for lone obs 
     df <- df %>% 
       complete(period, nesting(operatingunit, orgunituid, mech_code, fundingagency)) %>% 
@@ -34,11 +39,6 @@ library(ICPIutilities)
       ungroup() %>% 
       mutate(flag_loneobs = ifelse(period %in% c("FY17Q4","FY20Q1"), FALSE, flag_loneobs)) %>% 
       filter(!is.na(value))
-    
-  #limit df for analysis
-    df <- df %>% 
-      arrange(operatingunit, orgunituid, period) %>% 
-      select(operatingunit, orgunituid, period, mech_code, fundingagency, value)
     
   #flag multi mechanism site
     df <- df  %>% 
