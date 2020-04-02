@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-03-29
+##  UPDATE:  2020-04-02
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -117,9 +117,13 @@ library(ICPIutilities)
     write_csv(df_end_out, "Dataout/TXCURR_SiteTransitions_OutofPEPFAR.csv", na = "")
     
   #all multi mechanism sites
-    df_multimechs <- df %>% 
+    lst_multimechs <- df %>% 
       filter(flag_multimech_site == TRUE) %>% 
-      select(orgunituid:flag_multimech_site) 
+      distinct(orgunituid) %>% 
+      pull()
+    
+    df_multimechs <- df %>% 
+      filter(orgunituid %in% lst_multimechs)
     
     write_csv(df_multimechs, "Dataout/TXCURR_Site_MultiMechs.csv", na = "")
 
