@@ -118,7 +118,8 @@ library(ICPIutilities)
     
   #all multi mechanism sites
     lst_multimechs <- df %>% 
-      filter(flag_multimech_site == TRUE) %>% 
+      filter(period != "FY17Q4",
+             flag_multimech_site == TRUE) %>% 
       distinct(orgunituid) %>% 
       pull()
     
