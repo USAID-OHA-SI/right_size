@@ -36,6 +36,9 @@ library(ICPIutilities)
     df_full <- df_sngl %>% 
       mutate(tx_curr_w_zero = tx_curr) %>% 
       complete(period, nesting(orgunituid, mech_code), fill = list(tx_curr_w_zero = 0)) %>% 
+      group_by(mech_code) %>% 
+      fill(operatingunit) %>% 
+      ungroup() %>% 
       arrange(operatingunit, orgunituid, mech_code, period)
     
   #calc normal NET_NEW
