@@ -102,18 +102,21 @@ library(ICPIutilities)
     df_nn <- df_complete_nn_both %>% 
       filter_at(vars(tx_curr, tx_net_new, tx_net_new_adj), 
                 any_vars(!is.na(.) & . != 0))
+    
+  #repace artifically created zeros for TX_CURR
+    df_nn <- mutate_at(df_nn, vars(tx_curr, tx_curr_lag_site), ~ na_if(., 0))
   
   #reorder
     df_nn <- select(df_nn, all_of(lst_order), starts_with("tx"))
 
   #check
-    site_uid <- "KNVM48HI1Qn"  #"HaDaUb79d7g"  #"KNVM48HI1Qn" #"RSCJ3wnhmYf"
-    df_nn %>%
-      filter(orgunituid == site_uid) %>%
-      select(period, facility, mech_code, tx_curr, tx_net_new, tx_net_new_adj) %>%
-      gather(indicator, value, tx_curr, tx_net_new, tx_net_new_adj) %>%
-      mutate(indicator = factor(indicator, c("tx_curr", "tx_net_new", "tx_net_new_adj"))) %>%
-      spread(period, value)
+    # site_uid <- "KNVM48HI1Qn"  #"HaDaUb79d7g"  #"KNVM48HI1Qn" #"RSCJ3wnhmYf"
+    # df_nn %>%
+    #   filter(orgunituid == site_uid) %>%
+    #   select(period, facility, mech_code, tx_curr, tx_net_new, tx_net_new_adj) %>%
+    #   gather(indicator, value, tx_curr, tx_net_new, tx_net_new_adj) %>%
+    #   mutate(indicator = factor(indicator, c("tx_curr", "tx_net_new", "tx_net_new_adj"))) %>%
+    #   spread(period, value)
     
   rm(df_complete_nn_orig, df_complete_nn_adj, df_complete_nn_both)
   
@@ -121,17 +124,15 @@ library(ICPIutilities)
 # ADD FLAGS BACK IN -------------------------------------------------------
 
   #select flags to merge on from orig df
-    df_flags <- df %>% 
-      select(orgunituid, mech_code, period, flag_loneobs:agency_inheriting)
+    df_flags <- select(df, orgunituid, mech_code, period, flag_loneobs:agency_inheriting)
   
   #merge onto nn
-    df_nn_flags <- df_nn %>% 
-      left_join(df_flags, by = c("orgunituid", "mech_code", "period"))
+    df_nn_flags <- left_join(df_nn, df_flags, by = c("orgunituid", "mech_code", "period"))
     
   #fill missing (ie where mech has neg net_new after it transitions)
     df_nn_flags <- df_nn_flags %>% 
       group_by(mech_code, orgunituid) %>% 
-      fill(flag_loneobs:last_obs_sitexmech) %>% 
+      fill(flag_loneobs:last_obs_sitexmech, .direction = "downup") %>% 
       ungroup() %>% 
       mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
      
