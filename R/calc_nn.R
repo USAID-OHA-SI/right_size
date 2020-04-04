@@ -31,10 +31,10 @@ library(ICPIutilities)
     
 
   #remove flags
-    df <- select(df, operatingunit:value)
+    df_noflag <- select(df, operatingunit:value)
       
   #remove all sites historically where there any instance of having muli-mechs
-    df_sngl_mechxsite <- filter(df, !orgunituid %in% lst_multimech_site)
+    df_sngl_mechxsite <- filter(df_noflag, !orgunituid %in% lst_multimech_site)
     
   #rename value to tx_curr
     df_sngl_mechxsite <- rename(df_sngl_mechxsite, tx_curr = value)
@@ -42,7 +42,7 @@ library(ICPIutilities)
   #store var order for export
     lst_order <- names(df_sngl_mechxsite)
   
-    rm(lst_multimech_site)
+    rm(df_noflag, lst_multimech_site)
     
 # CALCULATE NORMAL NET NEW ------------------------------------------------
     
@@ -116,6 +116,26 @@ library(ICPIutilities)
       spread(period, value)
     
   rm(df_complete_nn_orig, df_complete_nn_adj, df_complete_nn_both)
+  
+
+# ADD FLAGS BACK IN -------------------------------------------------------
+
+  #select flags to merge on from orig df
+    df_flags <- df %>% 
+      select(orgunituid, mech_code, period, flag_loneobs:agency_inheriting)
+  
+  #merge onto nn
+    df_nn_flags <- df_nn %>% 
+      left_join(df_flags, by = c("orgunituid", "mech_code", "period"))
+    
+  #fill missing (ie where mech has neg net_new after it transitions)
+    df_nn_flags <- df_nn_flags %>% 
+      group_by(mech_code, orgunituid) %>% 
+      fill(flag_loneobs:last_obs_sitexmech) %>% 
+      ungroup() %>% 
+      mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
+     
+  rm(df_flags, df_nn) 
   
 # EXPORT ------------------------------------------------------------------
 
