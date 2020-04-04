@@ -139,4 +139,5 @@ library(ICPIutilities)
   
 # EXPORT ------------------------------------------------------------------
 
-    write_csv(df_nn, "Dataout/TX_CURR_NN_Calcs.csv", na = "")
+  #export
+    write_csv(df_nn_flags, "Dataout/TX_CURR_NN_Calcs.csv", na = "")
