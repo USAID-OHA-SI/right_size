@@ -126,12 +126,12 @@ library(ICPIutilities)
   #calc transfers in and out by partner
     df_nn <- df_nn %>% 
       mutate(tx_xfer = case_when(is.na(tx_curr) & tx_net_new < 0 ~ tx_net_new)) %>% 
-      group_by(orgunituid, period) %>% 
+      group_by(orgunituid, period) %>%
+      mutate(tx_xfer = case_when(n() > 1 ~ tx_xfer)) %>% 
       fill(tx_xfer) %>% 
       ungroup() %>% 
       mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) 
-    
-  #TODO handling of flag_loneobs == TRUE
+
       
 # ADD FLAGS BACK IN -------------------------------------------------------
 
