@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2020-04-04
+##  UPDATE:  2020-04-05
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -121,6 +121,18 @@ library(ICPIutilities)
   rm(df_complete_nn_orig, df_complete_nn_adj, df_complete_nn_both)
   
 
+# ENUMERATE TRANFERS ------------------------------------------------------
+
+  #calc transfers in and out by partner
+    df_nn <- df_nn %>% 
+      mutate(tx_xfer = case_when(is.na(tx_curr) & tx_net_new < 0 ~ tx_net_new)) %>% 
+      group_by(orgunituid, period) %>% 
+      fill(tx_xfer) %>% 
+      ungroup() %>% 
+      mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) 
+    
+  #TODO handling of flag_loneobs == TRUE
+      
 # ADD FLAGS BACK IN -------------------------------------------------------
 
   #select flags to merge on from orig df
@@ -137,7 +149,7 @@ library(ICPIutilities)
       mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
      
   rm(df_flags, df_nn) 
-  
+    
 # EXPORT ------------------------------------------------------------------
 
   #export
