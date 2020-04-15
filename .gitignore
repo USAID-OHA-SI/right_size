@@ -51,3 +51,7 @@ vignettes/*.pdf
 *.twbx
 *.twbr
 *.twbx
+
+#no presentations
+*.pptx
+*.pdf
