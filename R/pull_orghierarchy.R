@@ -3,7 +3,7 @@
 ##  PURPOSE: pull DATIM hierarchy
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  
+##  UPDATE:  2020-09-04
 
 
 # DEPENDENCIES ------------------------------------------------------------
