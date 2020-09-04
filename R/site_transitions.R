@@ -37,7 +37,7 @@ library(ICPIutilities)
       group_by(orgunituid, mech_code) %>% 
       mutate(flag_loneobs = !is.na(value) & is.na(lead(value, order_by = period)) & is.na(lag(value, order_by = period))) %>% 
       ungroup() %>% 
-      mutate(flag_loneobs = ifelse(period %in% c("FY17Q4","FY20Q1"), FALSE, flag_loneobs)) %>% 
+      mutate(flag_loneobs = ifelse(period %in% c(min(df$period), max(df$period)), FALSE, flag_loneobs)) %>% 
       filter(!is.na(value))
     
   #flag multi mechanism site
@@ -57,7 +57,7 @@ library(ICPIutilities)
       group_by(orgunituid, mech_code) %>% 
       mutate(last_obs_sitexmech = max(period)) %>% 
       ungroup() %>% 
-      mutate(flag_end_sitexmech = period == last_obs_sitexmech & period != "FY20Q1")
+      mutate(flag_end_sitexmech = period == last_obs_sitexmech & period != max(df$period))
   
   #end type
     df <- df %>% 
