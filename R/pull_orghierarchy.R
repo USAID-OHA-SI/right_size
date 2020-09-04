@@ -21,7 +21,9 @@ library(lubridate)
 # PULL OU HIERARCHY -------------------------------------------------------
 
   #identify uids
-    ouuids <- identify_ouuids(myuser, mypwd(myuser)) %>% dplyr::pull(id)
+    ouuids <- identify_ouuids(myuser, mypwd(myuser)) %>% 
+      dplyr::filter(is.na(regional)) %>%
+      dplyr::pull(id)
     
   #pull hierarchy
     df_orgs <- purrr::map_dfr(.x = ouuids,
