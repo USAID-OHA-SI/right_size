@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2020-09-04
+##  UPDATE:  2020-09-27
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -101,7 +101,7 @@ library(fs)
       
       df <- df %>% 
         filter(psnu_lvl == lvl) %>% 
-        rename(psnu = oldname) %>% 
+        rename(psnu = all_of(oldname)) %>% 
         select(-contains("lvl"))
       
       invisible(df)
