@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-04-02
+##  UPDATE:  2020-09-28
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -73,6 +73,13 @@ library(ICPIutilities)
       group_by(orgunituid) %>%
       mutate(agency_exiting = case_when(end_type == "Transition to other agency" ~ fundingagency),
              agency_inheriting = case_when(end_type == "Transition to other agency" ~ lead(fundingagency, order_by = period))) %>% 
+      ungroup()
+    
+  #method (adjusted NN or traditional for multi-mech sites)
+    df <- df %>% 
+      group_by(orgunituid, mech_code) %>% 
+      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site) == TRUE ~ "standard",
+                                TRUE ~ "adjusted")) %>% 
       ungroup()
 
 
