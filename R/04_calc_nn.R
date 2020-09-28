@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2020-04-05
+##  UPDATE:  2020-09-28
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -19,35 +19,23 @@ library(ICPIutilities)
     df <- vroom("Dataout/TXCURR_Flags.csv")
 
 
-# REMOVE NON-STANDARD SITES -----------------------------------------------
+# MUNGE -------------------------------------------------------------------
 
-  #identify multi-mech sites
-    lst_multimech_site <- df %>% 
-      filter(flag_multimech_site == TRUE) %>% 
-      distinct(orgunituid) %>% 
-      pull()
+  #rename value
+    df <- rename(df, tx_curr = value)
     
-  #TODO Remove flag_loneobs == TRUE
-    
-
   #remove flags
-    df_noflag <- select(df, operatingunit:value)
-      
-  #remove all sites historically where there any instance of having muli-mechs
-    df_sngl_mechxsite <- filter(df_noflag, !orgunituid %in% lst_multimech_site)
+    df_noflag <- select(df, operatingunit:tx_curr, method)
     
-  #rename value to tx_curr
-    df_sngl_mechxsite <- rename(df_sngl_mechxsite, tx_curr = value)
-  
   #store var order for export
-    lst_order <- names(df_sngl_mechxsite)
-  
-    rm(df_noflag, lst_multimech_site)
+    lst_order <- names(df_noflag)
+    lst_order <- lst_order[lst_order != "method"]
     
 # CALCULATE NORMAL NET NEW ------------------------------------------------
     
   #create a full set of periods for calculating NET NEW
-    df_complete_mechxsite <- df_sngl_mechxsite %>% 
+    df_complete_mechxsite <- df_noflag %>%
+      select(-method) %>% 
       complete(period, nesting(orgunituid, mech_code), fill = list(tx_curr = 0)) %>% 
       group_by(mech_code, orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
@@ -67,7 +55,9 @@ library(ICPIutilities)
 # CALCULATE ADJUSTED NET NEW ----------------------------------------------
 
   #create a full set of periods for calculating NET NEW
-    df_complete_site <- df_sngl_mechxsite %>% 
+    df_complete_site <- df_noflag %>% 
+      filter(method == "adjusted") %>% 
+      select(-method) %>% 
       complete(period, nesting(orgunituid), fill = list(tx_curr = 0)) %>% 
       group_by(orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
@@ -85,7 +75,7 @@ library(ICPIutilities)
              tx_net_new_adj = tx_curr -  lag(tx_curr, order_by = period)) %>%
       ungroup() 
 
-    rm(df_sngl_mechxsite, df_complete_site)
+    rm(df_noflag, df_complete_site)
 
 # JOIN BOTH NET_NEW TYPES -------------------------------------------------
 
@@ -136,7 +126,7 @@ library(ICPIutilities)
 # ADD FLAGS BACK IN -------------------------------------------------------
 
   #select flags to merge on from orig df
-    df_flags <- select(df, orgunituid, mech_code, period, flag_loneobs:agency_inheriting)
+    df_flags <- select(df, orgunituid, mech_code, period, flag_loneobs:method)
   
   #merge onto nn
     df_nn_flags <- left_join(df_nn, df_flags, by = c("orgunituid", "mech_code", "period"))
@@ -150,6 +140,14 @@ library(ICPIutilities)
      
   rm(df_flags, df_nn) 
     
+
+# ADD COMBINED NET NEW ----------------------------------------------------
+
+  #var that includes both adj and traditional (for multi)
+    df_nn_flags <- df_nn_flags %>% 
+      mutate(tx_net_new_adj_plus = ifelse(method == "adjusted", tx_net_new_adj, tx_net_new)) %>% 
+      relocate(tx_net_new_adj_plus, .after = tx_net_new_adj)
+  
 # EXPORT ------------------------------------------------------------------
 
   #export
