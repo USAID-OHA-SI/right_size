@@ -134,7 +134,7 @@ library(ICPIutilities)
   #fill missing (ie where mech has neg net_new after it transitions)
     df_nn_flags <- df_nn_flags %>% 
       group_by(mech_code, orgunituid) %>% 
-      fill(flag_loneobs:last_obs_sitexmech, .direction = "downup") %>% 
+      fill(flag_loneobs:last_obs_sitexmech, method, .direction = "downup") %>% 
       ungroup() %>% 
       mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
      
