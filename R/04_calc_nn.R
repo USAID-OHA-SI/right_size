@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2020-09-28
+##  UPDATE:  2020-09-29
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -117,7 +117,7 @@ library(ICPIutilities)
     df_nn <- df_nn %>% 
       mutate(tx_xfer = case_when(is.na(tx_curr) & tx_net_new < 0 ~ tx_net_new)) %>% 
       group_by(orgunituid, period) %>%
-      mutate(tx_xfer = case_when(n() > 1 ~ tx_xfer)) %>% 
+      mutate(tx_xfer = case_when(n() == 2 ~ tx_xfer)) %>% 
       fill(tx_xfer) %>% 
       ungroup() %>% 
       mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) 
