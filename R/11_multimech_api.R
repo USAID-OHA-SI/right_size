@@ -3,7 +3,7 @@
 ##  PURPOSE: Identify number of sites with multiple partners FY18Q4-FY20Q1
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  
+##  UPDATE:  2020-09-27
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -27,7 +27,7 @@ pull_tx <- function(ou_uid, org_lvl, username, password, baseurl = "https://fina
   core_url <-
     paste0(baseurl,"api/29/analytics?",
            "dimension=ou:LEVEL-", org_lvl, ";", ou_uid, "&", #level and ou
-           "dimension=pe:2018Q3;2018Q4;2019Q1;2019Q2;2019Q3;2019Q4&", #period
+           "dimension=pe:2018Q3;2018Q4;2019Q1;2019Q2;2019Q3;2019Q4;2020Q1;2020Q2;2020Q2;2020Q3&", #period
            "dimension=bw8KHXzxd9i&", #Funding Agency
            "dimension=SH885jaRe0o&", #Funding Mechanism
            "dimension=LxhLO68FcXm:MvszPTQrUhy&", #technical areas, prep targets at community
@@ -91,7 +91,7 @@ df <- mutate(df, value = as.numeric(value))
 
 # EXPORT ------------------------------------------------------------------
 
-# write_csv(df, "Data/TX_CURR_SiteCount.csv", na = "")
+write_csv(df, "Data/TX_CURR_SiteCount.csv", na = "")
 
 
 # EXPLORE -----------------------------------------------------------------
@@ -154,6 +154,8 @@ df_site_multi <- df_site_cnts %>%
   filter(multi_ou == TRUE) %>% 
   mutate(country = fct_reorder(country, multiple, sum, .desc = TRUE),
          lab = case_when(multiple > 0 ~ multiple))
+
+ou_count <- unique(df_site_multi$operatingunit) %>% length()
 
 df_site_multi %>% 
   ggplot(aes(period, multiple)) +
