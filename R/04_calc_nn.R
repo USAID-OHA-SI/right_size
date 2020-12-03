@@ -25,17 +25,17 @@ library(ICPIutilities)
     df <- rename(df, tx_curr = value)
     
   #remove flags
-    df_noflag <- select(df, operatingunit:tx_curr, method)
+    df_noflag <- select(df, operatingunit:tx_curr, flag_multimech_site)
     
   #store var order for export
     lst_order <- names(df_noflag)
-    lst_order <- lst_order[lst_order != "method"]
+    lst_order <- lst_order[lst_order != "flag_multimech_site"]
     
 # CALCULATE NORMAL NET NEW ------------------------------------------------
     
   #create a full set of periods for calculating NET NEW
     df_complete_mechxsite <- df_noflag %>%
-      select(-method) %>% 
+      select(-flag_multimech_site) %>% 
       complete(period, nesting(orgunituid, mech_code), fill = list(tx_curr = 0)) %>% 
       group_by(mech_code, orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
@@ -56,8 +56,8 @@ library(ICPIutilities)
 
   #create a full set of periods for calculating NET NEW
     df_complete_site <- df_noflag %>% 
-      filter(method == "adjusted") %>% 
-      select(-method) %>% 
+      filter(flag_multimech_site == FALSE) %>% 
+      select(-flag_multimech_site) %>% 
       complete(period, nesting(orgunituid), fill = list(tx_curr = 0)) %>% 
       group_by(orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
