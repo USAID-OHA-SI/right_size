@@ -140,6 +140,10 @@ library(ICPIutilities)
       ungroup() %>% 
       mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
      
+  #remove transfers where there are mutliple mechanisms
+    df_nn_flags <- df_nn_flags %>% 
+      mutate(tx_xfer = ifelse(method == "standard", NA, tx_xfer))
+    
   rm(df_flags, df_nn) 
     
 
