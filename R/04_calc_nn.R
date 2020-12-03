@@ -118,7 +118,7 @@ library(ICPIutilities)
       mutate(tx_xfer = case_when(is.na(tx_curr) & tx_net_new < 0 ~ tx_net_new)) %>% 
       group_by(orgunituid, period) %>%
       mutate(tx_xfer = case_when(n() == 2 ~ tx_xfer)) %>% 
-      fill(tx_xfer) %>% 
+      fill(tx_xfer, .direction = "downup") %>% 
       ungroup() %>% 
       mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) 
 
