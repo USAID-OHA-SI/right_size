@@ -25,17 +25,17 @@ library(ICPIutilities)
     df <- rename(df, tx_curr = value)
     
   #remove flags
-    df_noflag <- select(df, operatingunit:tx_curr, method)
+    df_noflag <- select(df, operatingunit:tx_curr, flag_multimech_site)
     
   #store var order for export
     lst_order <- names(df_noflag)
-    lst_order <- lst_order[lst_order != "method"]
+    lst_order <- lst_order[lst_order != "flag_multimech_site"]
     
 # CALCULATE NORMAL NET NEW ------------------------------------------------
     
   #create a full set of periods for calculating NET NEW
     df_complete_mechxsite <- df_noflag %>%
-      select(-method) %>% 
+      select(-flag_multimech_site) %>% 
       complete(period, nesting(orgunituid, mech_code), fill = list(tx_curr = 0)) %>% 
       group_by(mech_code, orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
@@ -56,8 +56,8 @@ library(ICPIutilities)
 
   #create a full set of periods for calculating NET NEW
     df_complete_site <- df_noflag %>% 
-      filter(method == "adjusted") %>% 
-      select(-method) %>% 
+      filter(flag_multimech_site == FALSE) %>% 
+      select(-flag_multimech_site) %>% 
       complete(period, nesting(orgunituid), fill = list(tx_curr = 0)) %>% 
       group_by(orgunituid) %>% 
       fill(operatingunit, countryname, snu1, psnu, facility, 
@@ -115,12 +115,14 @@ library(ICPIutilities)
 
   #calc transfers in and out by partner
     df_nn <- df_nn %>% 
+      complete(period, nesting(orgunituid)) %>% 
       mutate(tx_xfer = case_when(is.na(tx_curr) & tx_net_new < 0 ~ tx_net_new)) %>% 
       group_by(orgunituid, period) %>%
       mutate(tx_xfer = case_when(n() == 2 ~ tx_xfer)) %>% 
-      fill(tx_xfer) %>% 
+      fill(tx_xfer, .direction = "downup") %>%
       ungroup() %>% 
-      mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) 
+      mutate(tx_xfer = ifelse(tx_net_new > 0, -tx_xfer, tx_xfer)) %>% 
+      filter(!is.na(mech_code))
 
       
 # ADD FLAGS BACK IN -------------------------------------------------------
@@ -138,6 +140,10 @@ library(ICPIutilities)
       ungroup() %>% 
       mutate(flag_end_sitexmech = ifelse(is.na(flag_end_sitexmech), FALSE, flag_end_sitexmech))
      
+  #remove transfers where there are mutliple mechanisms
+    df_nn_flags <- df_nn_flags %>% 
+      mutate(tx_xfer = ifelse(method == "standard", NA, tx_xfer))
+    
   rm(df_flags, df_nn) 
     
 
