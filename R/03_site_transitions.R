@@ -77,8 +77,10 @@ library(ICPIutilities)
     
   #method (adjusted NN or traditional for multi-mech sites)
     df <- df %>% 
-      group_by(orgunituid, mech_code) %>% 
-      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site) == TRUE ~ "standard",
+      complete(period, nesting(orgunituid)) %>% 
+      arrange(operatingunit, orgunituid, period) %>% 
+      group_by(orgunituid) %>% 
+      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = "period") == TRUE ~ "standard",
                                 TRUE ~ "adjusted")) %>% 
       ungroup()
 
