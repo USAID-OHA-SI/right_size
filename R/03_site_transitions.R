@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-09-28
+##  UPDATE:  2020-12-17
 
 
 # DEPENDENCIES ------------------------------------------------------------
