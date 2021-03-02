@@ -11,23 +11,23 @@
 library(tidyverse)
 library(Wavelength)
 library(lubridate)
-
+library(glamr)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
-  myuser <- ""
+  load_secrets()
 
 
 # PULL OU HIERARCHY -------------------------------------------------------
 
   #identify uids
-    ouuids <- identify_ouuids(myuser, mypwd(myuser)) %>% 
-      dplyr::filter(is.na(regional)) %>%
-      dplyr::pull(id)
+    ouuids <- identify_ouuids(datim_user(), datim_pwd()) %>% 
+      dplyr::filter(type == "OU") %>%
+      dplyr::pull(uid)
     
   #pull hierarchy
     df_orgs <- purrr::map_dfr(.x = ouuids,
-                              .f = ~ pull_hierarchy(.x, myuser, mypwd(myuser)))
+                              .f = ~ pull_hierarchy(.x, datim_user(), datim_pwd()))
 
 # EXPORT ------------------------------------------------------------------
 
