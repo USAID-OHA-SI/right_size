@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-09-28
+##  UPDATE:  2020-12-17
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -77,10 +77,13 @@ library(ICPIutilities)
     
   #method (adjusted NN or traditional for multi-mech sites)
     df <- df %>% 
+      complete(period, nesting(orgunituid)) %>% 
+      arrange(operatingunit, orgunituid, period) %>% 
       group_by(orgunituid, mech_code) %>% 
-      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site) == TRUE ~ "standard",
+      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = "period") == TRUE ~ "standard",
                                 TRUE ~ "adjusted")) %>% 
-      ungroup()
+      ungroup() %>% 
+      filter(!is.na(mech_code))
 
 
 # MERGE META --------------------------------------------------------------
