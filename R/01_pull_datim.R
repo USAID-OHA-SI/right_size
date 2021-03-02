@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2020-10-23
+##  UPDATE:  2021-03-02
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -12,11 +12,12 @@ library(tidyverse)
 library(Wavelength)
 library(lubridate)
 library(fs)
+library(glamr)
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
-  myuser <- ""
+  load_secrets()
 
 
 # DATIM API FUNCTION ------------------------------------------------------
@@ -26,7 +27,7 @@ library(fs)
     core_url <-
       paste0(baseurl,"api/29/analytics?",
              "dimension=ou:LEVEL-", org_lvl, ";", ou_uid, "&", #level and ou
-             "dimension=pe:2017Q3;2017Q4;2018Q1;2018Q2;2018Q3;2018Q3;2018Q4;2019Q1;2019Q2;2019Q3;2019Q4;2020Q1;2020Q2;2020Q3&", #period
+             "dimension=pe:2017Q3;2017Q4;2018Q1;2018Q2;2018Q3;2018Q3;2018Q4;2019Q1;2019Q2;2019Q3;2019Q4;2020Q1;2020Q2;2020Q3;2020Q4&", #period
              "dimension=bw8KHXzxd9i&", #Funding Agency
              "dimension=SH885jaRe0o&", #Funding Mechanism
              "dimension=LxhLO68FcXm:MvszPTQrUhy&", #technical areas, prep targets at community
@@ -41,26 +42,17 @@ library(fs)
 
 # IDENTIFY INPUTS FOR API -------------------------------------------------
 
-  #identify site level in each ou
-    df_lvls <- identify_levels(username = myuser, password = mypwd(myuser))
-  
-  #pull orgunit uids
-    df_uids <- identify_ouuids(username = myuser, password = mypwd(myuser))
-  
   #table for API use
-    ctry_list <- left_join(df_lvls, df_uids, by = c("country_name" = "displayName")) %>% 
-      select(operatingunit = name3, operatingunituid = id, countryname = country_name, 
-             psnu_lvl = prioritization, site_lvl = facility)
-    
-    rm(df_lvls, df_uids)
-
+    ctry_list <- get_outable(datim_user(), datim_pwd()) %>% 
+      select(operatingunit, countryname, countryname_uid, 
+             psnu_lvl = prioritization, site_lvl = facility_lvl)
 
 # PULL DATA ---------------------------------------------------------------
 
   #run API across all countries for site x IM TX_CURR
-    df <- map2_dfr(.x = ctry_list$operatingunituid, 
+    df <- map2_dfr(.x = ctry_list$countryname_uid, 
                    .y = ctry_list$site_lvl, 
-                   .f = ~ pull_tx(.x, .y, myuser, mypwd(myuser)))
+                   .f = ~ pull_tx(.x, .y, datim_user(), datim_pwd()))
 
 
 # MUNGE -------------------------------------------------------------------
