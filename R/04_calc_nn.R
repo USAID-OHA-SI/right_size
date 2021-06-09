@@ -87,7 +87,7 @@ library(glamr)
   #cleanup for merging 
     df_complete_nn_adj <- df_complete_nn_adj %>% 
       select(-tx_curr) %>% 
-      filter_at(vars(tx_net_new_adj, tx_curr_lag_site), any_vars(!is.na(.) & . != 0))
+      filter_at(vars(tx_net_new_adj, tx_curr_lag_site, tx_curr_lag2_site), any_vars(!is.na(.) & . != 0))
     
   #join
     df_complete_nn_both <- df_complete_nn_orig %>% 
@@ -99,7 +99,7 @@ library(glamr)
                 any_vars(!is.na(.) & . != 0))
     
   #repace artifically created zeros for TX_CURR
-    df_nn <- mutate_at(df_nn, vars(tx_curr, tx_curr_lag_site), ~ na_if(., 0))
+    df_nn <- mutate_at(df_nn, vars(tx_curr, tx_curr_lag_site, tx_curr_lag2_site), ~ na_if(., 0))
   
   #reorder
     df_nn <- select(df_nn, all_of(lst_order), starts_with("tx"))
@@ -113,8 +113,7 @@ library(glamr)
     #   mutate(indicator = factor(indicator, c("tx_curr", "tx_net_new", "tx_net_new_adj"))) %>%
     #   spread(period, value)
     
-  rm(df_complete_nn_orig, df_complete_nn_adj, df_complete_nn_both)
-  
+  rm(list=ls(pattern="df_complete_nn"))
 
 # ENUMERATE TRANFERS ------------------------------------------------------
 
