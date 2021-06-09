@@ -148,7 +148,7 @@ library(glamr)
     df_nn_flags <- df_nn_flags %>% 
       mutate(tx_xfer = ifelse(method == "standard", NA, tx_xfer))
     
-  rm(df_flags, df_nn) 
+  rm(df, df_flags, df_nn) 
     
 
 # ADD COMBINED NET NEW ----------------------------------------------------
@@ -157,6 +157,32 @@ library(glamr)
     df_nn_flags <- df_nn_flags %>% 
       mutate(tx_net_new_adj_plus = ifelse(method == "adjusted", tx_net_new_adj, tx_net_new)) %>% 
       relocate(tx_net_new_adj_plus, .after = tx_net_new_adj)
+
+# CLEAN UP VL -------------------------------------------------------------
+
+  #clean up and reshape for merge
+  df_vl <- df_vl %>% 
+    clean_indicator() %>%
+    select(-c(mech, numeratordenom)) %>% 
+    pivot_wider(names_from = indicator, 
+                names_glue = "{tolower(indicator)}",
+                values_from = value) %>% 
+    rename_official() %>% 
+    mutate(mech_code = as.double(mech_code))
+  
+  #merge onto TX_CURR and NN data
+  df_nn_flags <- full_join(df_nn_flags, df_vl_clean)
+  
+  #move pvls to right location
+  df_nn_flags <- df_nn_flags %>% 
+    relocate(tx_pvls_d, tx_pvls, .after = tx_xfer)
+  
+  #clean up dedups
+  df_nn_flags <- df_nn_flags %>%
+    mutate(mech_code = as.character(mech_code),
+           mech_code = case_when(mech_code == "0" ~ "00000",
+                                 mech_code == "1" ~ "00001",
+                                 TRUE ~ mech_code))
   
 # EXPORT ------------------------------------------------------------------
 
