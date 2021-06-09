@@ -12,12 +12,16 @@ library(tidyverse)
 library(vroom)
 library(fs)
 library(ICPIutilities)
+library(glamr)
 
 # IMPORT ------------------------------------------------------------------
 
   #read data
     df <- vroom("Dataout/TXCURR_Flags.csv")
-
+    
+    df_vl <- vroom("Data/TX_PVLS_IM_Site.csv",
+                   col_types = c(value = "d",
+                                 .default = "c"))
 
 # MUNGE -------------------------------------------------------------------
 
