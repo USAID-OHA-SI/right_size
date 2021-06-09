@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-12-17
+##  UPDATE:  2020-06-09
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -63,7 +63,7 @@ library(ICPIutilities)
     df <- df %>% 
       group_by(orgunituid) %>% 
       mutate(end_type = case_when(flag_end_sitexmech == TRUE & last_obs_sitexmech == last_obs_site ~ "Transition out of PEPFAR",
-                                  flag_end_sitexmech == TRUE & flag_multimech_site == TRUE ~ "Consolidate mutli-mechanism site",
+                                  flag_end_sitexmech == TRUE & flag_multimech_site == TRUE ~ "Consolidate multi-mechanism site",
                                   flag_end_sitexmech == TRUE & fundingagency != lead(fundingagency, order_by = period) ~ "Transition to other agency",
                                   flag_end_sitexmech == TRUE & mech_code != lead(mech_code, order_by = period) ~ "Transition to other mechanism")) %>% 
       ungroup()
