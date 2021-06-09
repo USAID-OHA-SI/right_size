@@ -24,14 +24,21 @@ library(glamr)
 
   pull_tx <- function(ou_uid, org_lvl, username, password, baseurl = "https://final.datim.org/"){
     print(paste("running ", ou_uid, " ... ", Sys.time()))
+    
+    pds <- cross3(c(2018:2021), "Q", c(1:4)) %>% 
+      map_chr(paste0, collapse = "") %>% 
+      sort() %>% 
+      .[-1:-2] %>% 
+      paste(collapse = ';')
+    
     core_url <-
       paste0(baseurl,"api/29/analytics?",
              "dimension=ou:LEVEL-", org_lvl, ";", ou_uid, "&", #level and ou
-             "dimension=pe:2017Q3;2017Q4;2018Q1;2018Q2;2018Q3;2018Q3;2018Q4;2019Q1;2019Q2;2019Q3;2019Q4;2020Q1;2020Q2;2020Q3;2020Q4&", #period
+             "dimension=pe:",pds,"&", #period
              "dimension=bw8KHXzxd9i&", #Funding Agency
              "dimension=SH885jaRe0o&", #Funding Mechanism
-             "dimension=LxhLO68FcXm:MvszPTQrUhy&", #technical areas, prep targets at community
-             "filter=RUkVjD3BsS1:PE5QVF0w4xj&", #Top Level  - Numerator
+             "dimension=LxhLO68FcXm:MvszPTQrUhy;bZOF8bon1dD&", #technical areas - TX_CURR, TX_PVLS
+             "dimension=RUkVjD3BsS1&", #Top Level  - Numerator + Denom
              "displayProperty=SHORTNAME&skipMeta=false&hierarchyMeta=true")
     
     df <- get_datim_targets(core_url, username, password)
@@ -39,6 +46,21 @@ library(glamr)
     return(df)
   }
 
+
+# RENAME SELECT ORG LEVEL TO PSNU -----------------------------------------
+
+  rename_psnu <- function(df, lvl){
+    
+    oldname <- paste0("orglvl_", lvl) 
+    
+    df <- df %>% 
+      filter(psnu_lvl == lvl) %>% 
+      rename(psnu = all_of(oldname)) %>% 
+      select(-contains("lvl"))
+    
+    invisible(df)
+  }
+  
 
 # IDENTIFY INPUTS FOR API -------------------------------------------------
 
