@@ -3,7 +3,7 @@
 ##  PURPOSE: pull DATIM hierarchy
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-03-02
+##  UPDATE:  2020-06-09
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -22,12 +22,12 @@ library(glamr)
 
   #identify uids
     ouuids <- identify_ouuids(datim_user(), datim_pwd()) %>% 
-      dplyr::filter(type == "OU") %>%
-      dplyr::pull(uid)
+      filter(type == "OU") %>%
+      pull(uid)
     
   #pull hierarchy
-    df_orgs <- purrr::map_dfr(.x = ouuids,
-                              .f = ~ pull_hierarchy(.x, datim_user(), datim_pwd()))
+    df_orgs <-map_dfr(.x = ouuids,
+                      .f = ~ pull_hierarchy(.x, datim_user(), datim_pwd()))
 
 # EXPORT ------------------------------------------------------------------
 
