@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2020-09-29
+##  UPDATE:  2021-06-09
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -71,7 +71,8 @@ library(ICPIutilities)
       select(-c(operatingunit:primepartner, -mech_code)) %>% 
       arrange(orgunituid, period) %>% 
       group_by(orgunituid) %>%
-      mutate(tx_curr_lag_site = lag(tx_curr, order_by = period),
+      mutate(tx_curr_lag_site = lag(tx_curr, n = 1, order_by = period),
+             tx_curr_lag2_site = lag(tx_curr, n = 2, order_by = period),
              tx_net_new_adj = tx_curr -  lag(tx_curr, order_by = period)) %>%
       ungroup() 
 
