@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2021-03-02
+##  UPDATE:  2021-06-09
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -99,31 +99,22 @@ library(glamr)
              facility = `Organisation unit`, 
              mech = `Funding Mechanism`, 
              indicator = `Technical Area`, 
+             numeratordenom = `Top Level`,
              value = Value) %>%
       mutate(snu1 = orglvl_4,
-             countryname = case_when(str_detect(operatingunit, "Region") ~ snu1,
-                                     TRUE                                ~ operatingunit))
+             countryname = ifelse(str_detect(operatingunit, "Region"), snu1,operatingunit),
+             numeratordenom = ifelse(numeratordenom == "Top Level Denominator", "D", "N"))
+    
   #add psnu lvl to df for renaming purposes
     df_clean <- ctry_list %>% 
       select(countryname, psnu_lvl) %>% 
       left_join(df_clean, ., by = "countryname")
     
-  #function for renaming psnu by org level
-    rename_psnu <- function(df, lvl){
-      
-      oldname <- paste0("orglvl_", lvl) 
-      
-      df <- df %>% 
-        filter(psnu_lvl == lvl) %>% 
-        rename(psnu = all_of(oldname)) %>% 
-        select(-contains("lvl"))
-      
-      invisible(df)
-    }
-    
+  #rename psnu and drop other org_lvls
     df_clean <- map_dfr(unique(ctry_list$psnu_lvl) %>% setdiff(0), 
                    ~ rename_psnu(df_clean, .x))
-    
+  
+  #reorder vars
     df_clean <- df_clean %>% 
       select(period, operatingunit, countryname, snu1, psnu, 
              facility, orgunituid, everything()) 
@@ -133,6 +124,7 @@ library(glamr)
       mutate(mech = str_replace(mech, "^0000(0|1)", "ZZZ - 0000\\1 -")) %>% 
       separate(mech, c(NA, "mech_code", "mech_name"), extra = "merge", remove = FALSE)
     
+  #covert value to numeric
     df_clean <- mutate(df_clean, value = as.numeric(value))
 
 # EXPORT ------------------------------------------------------------------
