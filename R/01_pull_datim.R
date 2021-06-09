@@ -28,7 +28,7 @@ library(glamr)
     pds <- cross3(c(2018:2021), "Q", c(1:4)) %>% 
       map_chr(paste0, collapse = "") %>% 
       sort() %>% 
-      .[-1:-2] %>% 
+      .[-1] %>% 
       paste(collapse = ';')
     
     core_url <-
