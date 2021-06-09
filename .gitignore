@@ -55,3 +55,7 @@ vignettes/*.pdf
 #no presentations
 *.pptx
 *.pdf
+
+#folders
+Rmd/*
+Tableau/*
