@@ -130,5 +130,14 @@ library(glamr)
 # EXPORT ------------------------------------------------------------------
 
   dir_create("Data")
-  write_csv(df_clean, "Data/TX_CURR_IM_Site.csv", na = "")
+    
+  #export TX_CURR data
+    df_clean %>% 
+      filter(indicator == "TX_CURR") %>% 
+      write_csv("Data/TX_CURR_IM_Site.csv", na = "")
+    
+  #export TX_PVLS data
+    df_clean %>% 
+      filter(indicator == "TX_PVLS") %>% 
+      write_csv("Data/TX_PVLS_IM_Site.csv", na = "")
   
