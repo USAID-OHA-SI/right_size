@@ -76,30 +76,33 @@ library(glamr)
       arrange(orgunituid, period) %>% 
       group_by(orgunituid) %>%
       mutate(tx_curr_lag_site = lag(tx_curr, n = 1, order_by = period),
-             tx_curr_lag2_site = lag(tx_curr, n = 2, order_by = period),
              tx_net_new_adj = tx_curr -  lag(tx_curr, order_by = period)) %>%
       ungroup() 
 
     rm(df_noflag, df_complete_site)
 
+    
 # JOIN BOTH NET_NEW TYPES -------------------------------------------------
 
   #cleanup for merging 
     df_complete_nn_adj <- df_complete_nn_adj %>% 
       select(-tx_curr) %>% 
-      filter_at(vars(tx_net_new_adj, tx_curr_lag_site, tx_curr_lag2_site), any_vars(!is.na(.) & . != 0))
+      filter_at(vars(tx_net_new_adj, tx_curr_lag_site), any_vars(!is.na(.) & . != 0))
     
   #join
     df_complete_nn_both <- df_complete_nn_orig %>% 
       left_join(df_complete_nn_adj, by = c("period", "orgunituid", "mech_code"))
-    
+
+
+# CLEAN UP ----------------------------------------------------------------
+
   #remove  any with all 0/NAs
     df_nn <- df_complete_nn_both %>% 
       filter_at(vars(tx_curr, tx_net_new, tx_net_new_adj), 
                 any_vars(!is.na(.) & . != 0))
     
   #repace artifically created zeros for TX_CURR
-    df_nn <- mutate_at(df_nn, vars(tx_curr, tx_curr_lag_site, tx_curr_lag2_site), ~ na_if(., 0))
+    df_nn <- mutate_at(df_nn, vars(tx_curr, tx_curr_lag_site), ~ na_if(., 0))
   
   #reorder
     df_nn <- select(df_nn, all_of(lst_order), starts_with("tx"))
@@ -132,13 +135,14 @@ library(glamr)
 # ADD FLAGS BACK IN -------------------------------------------------------
 
   #select flags to merge on from orig df
-    df_flags <- select(df, orgunituid, mech_code, period, flag_loneobs:method)
+    df_flags <- select(df, orgunituid, mech_code, period, flag_loneobs:vlc_valid)
   
   #merge onto nn
     df_nn_flags <- left_join(df_nn, df_flags, by = c("orgunituid", "mech_code", "period"))
     
   #fill missing (ie where mech has neg net_new after it transitions)
     df_nn_flags <- df_nn_flags %>% 
+      mutate(vlc_valid = ifelse(is.na(vlc_valid), FALSE, vlc_valid)) %>% 
       group_by(mech_code, orgunituid) %>% 
       fill(flag_loneobs:last_obs_sitexmech, method, .direction = "downup") %>% 
       ungroup() %>% 
@@ -158,6 +162,15 @@ library(glamr)
       mutate(tx_net_new_adj_plus = ifelse(method == "adjusted", tx_net_new_adj, tx_net_new)) %>% 
       relocate(tx_net_new_adj_plus, .after = tx_net_new_adj)
 
+# CALCULATE TX_CURR_LAG2 FOR VLC ------------------------------------------
+  
+  df_nn_flags <- df_nn_flags %>% 
+    group_by(orgunituid) %>% 
+    mutate(tx_curr_lag2_site = case_when(vlc_valid == TRUE ~ 
+                                           lag(tx_curr, n = 2, order_by = period)),
+           .after = tx_curr_lag_site) %>% 
+    ungroup()
+  
 # CLEAN UP VL -------------------------------------------------------------
 
   #clean up and reshape for merge
@@ -167,22 +180,15 @@ library(glamr)
     pivot_wider(names_from = indicator, 
                 names_glue = "{tolower(indicator)}",
                 values_from = value) %>% 
-    rename_official() %>% 
-    mutate(mech_code = as.double(mech_code))
+    rename_official()
   
   #merge onto TX_CURR and NN data
-  df_nn_flags <- full_join(df_nn_flags, df_vl_clean)
+  df_nn_flags <- full_join(df_nn_flags, df_vl)
   
   #move pvls to right location
   df_nn_flags <- df_nn_flags %>% 
     relocate(tx_pvls_d, tx_pvls, .after = tx_xfer)
   
-  #clean up dedups
-  df_nn_flags <- df_nn_flags %>%
-    mutate(mech_code = as.character(mech_code),
-           mech_code = case_when(mech_code == "0" ~ "00000",
-                                 mech_code == "1" ~ "00001",
-                                 TRUE ~ mech_code))
   
 # EXPORT ------------------------------------------------------------------
 
