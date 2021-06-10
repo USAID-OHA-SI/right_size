@@ -77,9 +77,12 @@ library(ICPIutilities)
     
   #method (adjusted NN or traditional for multi-mech sites)
     df <- df %>% 
-      complete(period, nesting(orgunituid), fill = list(value = 0)) %>% 
+      complete(period, nesting(orgunituid), fill = list(mech_code = "PLACEHOLDER")) %>% 
+      group_by(orgunituid) %>% 
+      fill(operatingunit, .direction = "downup") %>% 
+      ungroup()
       arrange(operatingunit, orgunituid, period) %>% 
-      group_by(orgunituid, mech_code) %>% 
+      group_by(orgunituid) %>% 
       mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = "period") == TRUE ~ "standard",
                                 TRUE ~ "adjusted"),
              vlc_valid = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, n = 2, order_by = "period") == TRUE ~ FALSE, # | lag(value, n = 2, order_by = "period") == 0 ~ FALSE
