@@ -77,9 +77,6 @@ library(ICPIutilities)
     
   #method (adjusted NN or traditional for multi-mech sites)
     df <- df %>% 
-      group_by(orgunituid) %>% 
-      mutate(pd_site_id = dense_rank(period)) %>% 
-      ungroup() %>%
       complete(period, nesting(orgunituid), fill = list(mech_code = "PLACEHOLDER")) %>% 
       group_by(orgunituid) %>% 
       fill(operatingunit, .direction = "downup") %>% 
@@ -89,9 +86,8 @@ library(ICPIutilities)
       mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = period) == TRUE ~ "standard",
                                 TRUE ~ "adjusted"),
              vlc_valid = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, n = 2, order_by = period) == TRUE ~ FALSE,
-                                   TRUE ~ TRUE),
-             vlc_valid = ifelse(pd_site_id < 3, FALSE, vlc_valid)
-      ) %>% 
+                                   is.na(lag(value, n = 2, order_by = period)) ~ FALSE,
+                                   TRUE ~ TRUE)) %>% 
       ungroup() %>% 
       filter(mech_code != "PLACEHOLDER")
 
