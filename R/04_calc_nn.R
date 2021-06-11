@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2021-06-09
+##  UPDATE:  2021-06-11
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -19,9 +19,7 @@ library(glamr)
   #read data
     df <- vroom("Dataout/TXCURR_Flags.csv")
     
-    df_vl <- vroom("Data/TX_PVLS_IM_Site.csv",
-                   col_types = c(value = "d",
-                                 .default = "c"))
+    df_vl <- vroom("Data/TX_PVLS_IM_Site.csv", col_types = c(value = "d", .default = "c"))
 
 # MUNGE -------------------------------------------------------------------
 
