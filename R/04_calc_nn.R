@@ -188,7 +188,20 @@ library(glamr)
   #move pvls to right location
   df_nn_flags <- df_nn_flags %>% 
     relocate(tx_pvls_d, tx_pvls, .after = tx_xfer)
-  
+ 
+  #fill missing values (TX_PVLS without TX_CURR)
+  suppressWarnings(
+    df_nn_flags <- df_nn_flags %>% 
+      group_by(orgunituid, period) %>% 
+      mutate(miss_valid_dedup = max(is.na(vlc_valid) & tx_pvls_d < 0) == 1 & is.na(vlc_valid),
+             miss_fill = max(vlc_valid, na.rm = TRUE) %>% as.logical) %>% 
+      ungroup() %>% 
+      mutate(vlc_valid = case_when(miss_valid_dedup == TRUE ~ miss_fill, 
+                                   is.na(vlc_valid) ~ FALSE,
+                                   TRUE ~ vlc_valid),
+             method = ifelse(is.na(method), "no TX_CURR reported", method)) %>% 
+      select(-starts_with("miss_"))
+    )
   
 # EXPORT ------------------------------------------------------------------
 
