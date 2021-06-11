@@ -164,11 +164,15 @@ library(glamr)
   
   df_nn_flags <- df_nn_flags %>% 
     complete(period, nesting(orgunituid)) %>%
+    group_by(orgunituid, period) %>% 
+    mutate(tx_curr_site = sum(tx_curr, na.rm = TRUE)) %>% 
+    ungroup() %>% 
     group_by(orgunituid) %>% 
     mutate(tx_curr_lag2_site = case_when(vlc_valid == TRUE ~ 
-                                           lag(tx_curr, n = 2, order_by = period)),
+                                           lag(tx_curr_site, n = 2, order_by = period)),
            .after = tx_curr_lag_site) %>% 
-    ungroup() %>% 
+    ungroup() %>%
+    select(-tx_curr_site) %>% 
     filter(!is.na(mech_code))
   
 # CLEAN UP VL -------------------------------------------------------------
