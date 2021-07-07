@@ -3,7 +3,7 @@
 ##  PURPOSE: pull DATIM hierarchy
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-09-04
+##  UPDATE:  2021-06-09
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -11,25 +11,25 @@
 library(tidyverse)
 library(Wavelength)
 library(lubridate)
-
+library(glamr)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
-  myuser <- ""
+  load_secrets()
 
 
 # PULL OU HIERARCHY -------------------------------------------------------
 
   #identify uids
-    ouuids <- identify_ouuids(myuser, mypwd(myuser)) %>% 
-      dplyr::filter(is.na(regional)) %>%
-      dplyr::pull(id)
+    ouuids <- identify_ouuids(datim_user(), datim_pwd()) %>% 
+      filter(type == "OU") %>%
+      pull(uid)
     
   #pull hierarchy
-    df_orgs <- purrr::map_dfr(.x = ouuids,
-                              .f = ~ pull_hierarchy(.x, myuser, mypwd(myuser)))
+    df_orgs <-map_dfr(.x = ouuids,
+                      .f = ~ pull_hierarchy(.x, datim_user(), datim_pwd()))
 
 # EXPORT ------------------------------------------------------------------
 
   #save
-    hfr_export(df_orgs, "Data", type = "orghierarchy")
+    write_csv(df_orgs, "PEPFAR_orghierarchy.csv", na.rm = TRUE)

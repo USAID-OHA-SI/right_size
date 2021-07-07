@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2020-12-17
+##  UPDATE:  2021-06-11
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -63,7 +63,7 @@ library(ICPIutilities)
     df <- df %>% 
       group_by(orgunituid) %>% 
       mutate(end_type = case_when(flag_end_sitexmech == TRUE & last_obs_sitexmech == last_obs_site ~ "Transition out of PEPFAR",
-                                  flag_end_sitexmech == TRUE & flag_multimech_site == TRUE ~ "Consolidate mutli-mechanism site",
+                                  flag_end_sitexmech == TRUE & flag_multimech_site == TRUE ~ "Consolidate multi-mechanism site",
                                   flag_end_sitexmech == TRUE & fundingagency != lead(fundingagency, order_by = period) ~ "Transition to other agency",
                                   flag_end_sitexmech == TRUE & mech_code != lead(mech_code, order_by = period) ~ "Transition to other mechanism")) %>% 
       ungroup()
@@ -77,13 +77,19 @@ library(ICPIutilities)
     
   #method (adjusted NN or traditional for multi-mech sites)
     df <- df %>% 
-      complete(period, nesting(orgunituid)) %>% 
-      arrange(operatingunit, orgunituid, period) %>% 
-      group_by(orgunituid, mech_code) %>% 
-      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = "period") == TRUE ~ "standard",
-                                TRUE ~ "adjusted")) %>% 
+      complete(period, nesting(orgunituid), fill = list(mech_code = "PLACEHOLDER")) %>% 
+      group_by(orgunituid) %>% 
+      fill(operatingunit, .direction = "downup") %>% 
       ungroup() %>% 
-      filter(!is.na(mech_code))
+      arrange(operatingunit, orgunituid, period) %>% 
+      group_by(orgunituid) %>% 
+      mutate(method = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, order_by = period) == TRUE ~ "standard",
+                                TRUE ~ "adjusted"),
+             vlc_valid = case_when(flag_multimech_site == TRUE | lag(flag_multimech_site, n = 2, order_by = period) == TRUE ~ FALSE,
+                                   is.na(lag(value, n = 2, order_by = period)) ~ FALSE,
+                                   TRUE ~ TRUE)) %>% 
+      ungroup() %>% 
+      filter(mech_code != "PLACEHOLDER")
 
 
 # MERGE META --------------------------------------------------------------
