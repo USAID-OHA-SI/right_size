@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2021-06-09
+##  UPDATE:  2021-08-23
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -35,7 +35,7 @@ library(glamr)
       paste0(baseurl,"api/29/analytics?",
              "dimension=ou:LEVEL-", org_lvl, ";", ou_uid, "&", #level and ou
              "dimension=pe:",pds,"&", #period
-             "dimension=bw8KHXzxd9i&", #Funding Agency
+             "dimension=bw8KHXzxd9i:all&", #Funding Agency
              "dimension=SH885jaRe0o&", #Funding Mechanism
              "dimension=LxhLO68FcXm:MvszPTQrUhy;bZOF8bon1dD&", #technical areas - TX_CURR, TX_PVLS
              "dimension=RUkVjD3BsS1&", #Top Level  - Numerator + Denom
@@ -67,7 +67,7 @@ library(glamr)
   #table for API use
     ctry_list <- get_outable(datim_user(), datim_pwd()) %>% 
       select(operatingunit, countryname, countryname_uid, 
-             psnu_lvl = prioritization, site_lvl = facility_lvl)
+             psnu_lvl, site_lvl = facility_lvl)
 
 # PULL DATA ---------------------------------------------------------------
 
