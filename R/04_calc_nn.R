@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2021-06-11
+##  UPDATE:  2021-08-23
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -11,7 +11,7 @@
 library(tidyverse)
 library(vroom)
 library(fs)
-library(ICPIutilities)
+library(gophr)
 library(glamr)
 
 # IMPORT ------------------------------------------------------------------
@@ -187,7 +187,9 @@ library(glamr)
     rename_official()
   
   #merge onto TX_CURR and NN data
-  df_nn_flags <- full_join(df_nn_flags, df_vl)
+  df_nn_flags <- df_nn_flags %>% 
+    mutate(mech_code = as.character(mech_code)) %>% 
+    full_join(df_vl)
   
   #move pvls to right location
   df_nn_flags <- df_nn_flags %>% 

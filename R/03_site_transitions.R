@@ -3,7 +3,7 @@
 ##  PURPOSE: flag site shifts
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2021-06-11
+##  UPDATE:  2021-08-23
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -11,7 +11,7 @@
 library(tidyverse)
 library(vroom)
 library(fs)
-library(ICPIutilities)
+library(gophr)
 
 # IMPORT ------------------------------------------------------------------
 
