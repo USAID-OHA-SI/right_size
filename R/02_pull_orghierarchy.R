@@ -3,7 +3,7 @@
 ##  PURPOSE: pull DATIM hierarchy
 ##  LICENCE: MIT
 ##  DATE:    2020-03-18
-##  UPDATE:  2021-06-09
+##  UPDATE:  2021-08-23
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -32,4 +32,4 @@ library(glamr)
 # EXPORT ------------------------------------------------------------------
 
   #save
-    write_csv(df_orgs, "PEPFAR_orghierarchy.csv", na.rm = TRUE)
+    write_csv(df_orgs, "PEPFAR_orghierarchy.csv", na = "")
