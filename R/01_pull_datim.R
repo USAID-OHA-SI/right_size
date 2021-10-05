@@ -3,7 +3,7 @@
 ##  PURPOSE: pull and structure TX_CURR data
 ##  LICENCE: MIT
 ##  DATE:    2020-03-12
-##  UPDATE:  2021-08-23
+##  UPDATE:  2021-10-05
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -119,6 +119,13 @@ library(glamr)
       select(period, operatingunit, countryname, snu1, psnu, 
              facility, orgunituid, everything()) 
   
+  #clean funding agency
+    df_agency_map <- datim_dim_items(dimension = "Funding Agency")
+    df_clean <- df_clean %>% 
+      left_join(df_agency_map, by = c("fundingagency" = "id")) %>% 
+      mutate(fundingagency = item) %>% 
+      select(-item)
+    
   #separate mech info
     df_clean <- df_clean %>% 
       mutate(mech = str_replace(mech, "^0000(0|1)", "ZZZ - 0000\\1 -")) %>% 
