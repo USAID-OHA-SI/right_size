@@ -3,7 +3,7 @@
 ##  PURPOSE: gen NET NEW
 ##  LICENCE: MIT
 ##  DATE:    2020-03-29
-##  UPDATE:  2021-08-23
+##  UPDATE:  2021-11-15
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -17,7 +17,13 @@ library(glamr)
 # IMPORT ------------------------------------------------------------------
 
   #read data
-    df <- vroom("Dataout/TXCURR_Flags.csv")
+    df <- vroom("Dataout/TXCURR_Flags.csv",
+                col_types = c(value = "d",
+                              flag_loneobs = "l",
+                              flag_multimech_site = "l",
+                              flag_end_sitexmech = "l",
+                              vlc_valid = "l",
+                              .default = "c"))
     
     df_vl <- vroom("Data/TX_PVLS_IM_Site.csv", col_types = c(value = "d", .default = "c"))
 
