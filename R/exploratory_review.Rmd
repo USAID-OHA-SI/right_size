@@ -1,0 +1,465 @@
+---
+title: "Explore Partner Site Transition Data"
+output: 
+  html_document: 
+    fig_width: 9
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+
+The net new adjustment data were pulled from DATIM via API [2020-09-27] after the cleaning window closed for FY20Q3. Flags and additional munging to create the variables can be found in [USAID-OHA-SI/right_size repo](https://github.com/USAID-OHA-SI/right_size).
+
+```{r dependencies, message=FALSE, warning=FALSE,}
+library(tidyverse)
+library(vroom)
+library(scales)
+library(extrafont)
+library(glitr)
+library(glue)
+```
+
+```{r load, message=FALSE, warning=FALSE, cache=TRUE}
+
+df <- vroom("Dataout/TXCURR_Flags.csv",
+            col_types = c(value = "d", 
+                          flag_loneobs = "l", 
+                          flag_multimech_site = "l",
+                          flag_end_sitexmech = "l", 
+                          .default = "c"))
+
+df <- df %>% 
+  filter(period != "FY17Q4",
+         mech_code != "16772")
+
+df_nn <- vroom("Dataout/TX_CURR_NN_Calcs.csv") %>% 
+  filter(period != "FY17Q4",
+         mech_code != "16772")
+
+```
+```{r, echo=FALSE}
+#lone observations
+# df %>% 
+#   filter(flag_loneobs,
+#          !mech_code %in% c("00000", "00001")) %>% 
+#   distinct(period, mech_code, orgunituid) %>% 
+#   count(period, mech_code) %>% 
+#   group_by(mech_code) %>% 
+#   mutate(max = max(n)) %>% 
+#   ungroup() %>% 
+#   spread(period, n) %>% 
+#   arrange(desc(max))
+```
+
+
+I'll be excluding 16672 South Africa Department of Health from this review. This mechanism reports only at Q4 each year (a "lone observation"). There are other mehcanism with lone observations at Q4 as well as other periods, but this is a massive outlier reporting on ~1300 sites in FY18Q4 and ~1,400 sites in FY19Q4 
+
+
+## How many distinct sites report each period?
+
+```{r, echo = FALSE}
+site_cnt <- df %>% 
+  distinct(period, orgunituid) %>% 
+  count(period, name = "all_sites")
+
+lrg_ctrys <- df %>% 
+  filter(period == max(period)) %>% 
+  distinct(countryname, orgunituid) %>% 
+  count(countryname, sort = TRUE) %>% 
+  mutate(share = n / sum(n),
+         cum_share = cumsum(share))
+
+top <- 5
+lrg_ctrys <- lrg_ctrys %>% 
+  slice_max(n, n = top)
+```
+
+Between `r min(site_cnt$period)` and `r max(site_cnt$period)`, on average, `r comma(mean(site_cnt$all_sites))` sites reported TX_CURR each period. In `r max(site_cnt$period)`, `r percent(sum(lrg_ctrys$share))` of treatment sites were in the  `r top` countries. 
+
+```{r, echo = FALSE}
+ site_cnt %>% 
+  ggplot(aes(period, all_sites)) +
+  geom_col() +
+   geom_hline(yintercept = 0) +
+  geom_text(aes(label = comma(all_sites)), vjust = -.5,
+            family = "Source Sans Pro", color = "gray30", size = 4) +
+  labs(x = NULL, y = NULL, title = "PEPFAR SITES REPORTING TX_CURR") +
+  si_style_nolines() +
+  theme(axis.text.y = element_blank())
+
+```
+
+
+## How many transitions occur each period?
+
+```{r, echo = FALSE}
+
+site_mech_cnt <- df %>% 
+  filter(mech_code != 16772) %>% 
+  distinct(period, mech_code, orgunituid) %>% 
+  count(period, name = "all_mech_sites")
+
+trans_mech_cnt <- df %>%
+  filter(mech_code != 16772) %>% 
+  filter(flag_end_sitexmech == TRUE) %>%
+  distinct(period, mech_code, orgunituid) %>%
+  count(period, name = "trans_mech_sites") %>% 
+  left_join(site_mech_cnt, by = "period") %>% 
+  mutate(share = trans_mech_sites / all_mech_sites)
+
+fy19q4 <- trans_mech_cnt %>% 
+  filter(period == "FY19Q4") %>% 
+  pull(share) %>% 
+  percent()
+
+nonq4_avg <- trans_mech_cnt %>% 
+  filter(str_detect(period, "Q4", negate = TRUE)) %>% 
+  summarise(share = mean(share)) %>% 
+  pull(share) %>% 
+  percent()
+```
+
+Site transitions are defined as at point at which a mechanism stops reporting in a given site. For this review, I have defined four types of transitions:
+
+  - Transition to other mechanism (same agency)
+  - Transition to other agency
+  - Transition out of PEPFAR
+  - Consolidation of a multi-mechanism site
+  
+Most of the transitions occur in Q4 when mechanism are ending and/or COP funding/prioritize geographic shifts.  In FY19Q4, there were mechanism site shifts in `r fy19q4` of PEPFAR treatment sites. Outside of Q4, there is still movement amongst sites, with `r nonq4_avg` of sites transition in some fashion.
+
+```{r, echo = FALSE}
+ trans_mech_cnt %>% 
+  ggplot(aes(period, trans_mech_sites)) +
+  geom_col() +
+  geom_hline(yintercept = 0) +
+  geom_text(aes(label = comma(trans_mech_sites)), vjust = -.5,
+            family = "Source Sans Pro", color = "gray30", size = 4) +
+  labs(x = NULL, y = NULL, title = "SITE TRANSITIONS MOSTLY IN Q4") +
+  si_style_nolines() +
+  theme(axis.text.y = element_blank())
+```
+
+If we break down by transition type, most sites on a given quarter are transferring within the same agency, but many exit PEPFAR all together. During Q4, there is a big uptick in interagency tranfers. 
+
+```{r, echo = FALSE}
+df %>%
+  filter(flag_end_sitexmech == TRUE) %>%
+  distinct(period, mech_code, orgunituid, end_type) %>%
+  count(period, end_type, name = "trans_mech_sites") %>% 
+  ggplot(aes(period, trans_mech_sites)) +
+  geom_blank(aes(y = trans_mech_sites * 1.1)) +
+  geom_col() +
+  geom_hline(yintercept = 0) +
+  geom_text(aes(label = comma(trans_mech_sites, 1)), vjust = -.5,
+            family = "Source Sans Pro", color = "gray30", size = 3) +
+  labs(x = NULL, y = NULL, title = "SITE TRANSITIONS MOSTLY WITHIN AGENCY OR OUT OF PEPFAR") +
+  scale_x_discrete(labels = c("FY18Q1", "", "", "",
+                              "FY19Q1", "", "", "",
+                              "FY20Q1", "", "")) +
+  facet_wrap(~end_type) +
+  si_style_nolines() +
+  theme(axis.text.y = element_blank())
+
+```
+```{r, echo = FALSE}
+
+# df %>%
+#   filter(end_type == "Transition out of PEPFAR",
+#          period == "FY19Q4") %>%
+#   distinct(countryname, period, orgunituid, mech_code, end_type) %>%
+#   count(countryname, period, end_type, name = "exit_sites", sort = TRUE)
+# 
+# df %>%
+#   filter(period == "FY19Q4",
+#          countryname == "South Africa") %>%
+#   distinct(countryname, period,orgunituid, mech_code, end_type) %>%
+#   count(countryname, period, end_type, sort = TRUE) %>% 
+#   mutate(share = n / sum(n))
+# 
+# df %>%
+#   filter(countryname == "South Africa") %>%
+#   distinct(countryname, period,orgunituid, mech_code) %>%
+#   count(countryname, period) 
+
+```
+
+The big spike in sites no longer reporting to pepfar in FY19Q4 is being drive by Nigeria, Cote d'Ivoire, and Kenya, who collectively had just over 1,000 sites exit PEPFAR.
+
+## What share of sites are multi-mech sites?
+
+```{r, echo = FALSE}
+multi <- df %>%
+    filter(period != "FY17Q4") %>%
+    distinct(period, orgunituid, flag_multimech_site) %>%
+    count(period,flag_multimech_site) %>%
+    group_by(period) %>%
+    mutate(share = n/sum(n)) %>%
+    ungroup() %>%
+    filter(flag_multimech_site == TRUE)
+```
+
+The approach for applying TX_NET_NEW adjustments takes the TX_CURR from the prior period *regardless of whether the mechanism was there or not* and using that to calculate the adjust Net New. This approach is in contrast to the current calculation that only looks at the TX_CURR for just that mechanism. This adjustment can only be done where there is one mechanism in each period, otherwise this calculation cannot be done systematically and would require context. 
+
+The good news it that since FY18Q1, only `r percent(mean(multi$share), 1)` of sites globally have more than one mechanism working in that site.
+
+```{r, echo = FALSE}
+multi %>% 
+  ggplot(aes(period, share, group = 1)) +
+  geom_area(fill = "gray30") +
+  expand_limits(y = 0) +
+  labs(x = NULL, y = NULL,
+       title = "GLOBALLY SHARE OF MULTI-MECH SITES ON RISE BUT\nLESS THAN 2% OF ALL SITES") +
+  scale_y_continuous(label = percent_format(.1)) +
+  si_style() 
+```
+
+The spread across countries is not normally distributed however. But, most of the mutli mechanism sites are in smaller countries. 
+
+```{r, echo = FALSE}
+
+#aggregate
+  df_site_type <- df %>% 
+    mutate(site_type = ifelse(method == "adjusted", "single", "multi")) %>% 
+    group_by(operatingunit, period, site_type) %>% 
+    summarise(tx_curr = sum(value, na.rm = TRUE),
+              site_count = n(),
+              .groups = "drop") %>% 
+    ungroup() 
+
+#share of tx_curr between mutli mech v not
+  df_site_type <- df_site_type %>% 
+    group_by(operatingunit, period) %>%
+    mutate(share_result = tx_curr/sum(tx_curr, na.rm = TRUE),
+           share_sites = site_count/sum(site_count, na.rm = TRUE)) %>% 
+    ungroup()
+
+  ou_order <- df %>% 
+    filter(period == max(period)) %>% 
+    count(operatingunit, wt = value, sort = TRUE) %>% 
+    mutate(operatingunit = recode(operatingunit,
+                                  "Democratic Republic of the Congo" = "DRC",
+                                  "Western Hemisphere Region" = "WH Region")) %>% 
+    pull(operatingunit)
+  
+  df_viz <- df_site_type %>% 
+    complete(site_type, nesting(operatingunit, period), fill = list(share_result = 0, share_sites = 0, site_count = 0)) %>% 
+    filter(period != "FY17Q4",
+           site_type == "multi",
+           period %in% c("FY18Q4", 
+                         "FY19Q1", "FY19Q2", "FY19Q3", "FY19Q4",
+                         "FY20Q1", "FY20Q2", "FY20Q3")) %>% 
+    mutate(operatingunit = case_when(operatingunit == "Democratic Republic of the Congo" ~ "DRC",
+                                     operatingunit == "Western Hemisphere Region" ~ "WH Region",
+                                     TRUE ~ operatingunit),
+           operatingunit = factor(operatingunit, ou_order))
+  
+  
+  df_viz %>% 
+    ggplot(aes(period, share_sites)) +
+    geom_col(aes(y = 1), fill = "gray80", alpha = .7, na.rm = TRUE) +
+    geom_col(fill = "#e34a33", na.rm = TRUE) +
+    geom_hline(aes(yintercept = 0), na.rm = TRUE) +
+    geom_text(aes(label = case_when(share_sites > 0 ~ percent(share_sites, 1))), 
+              vjust = -.8, na.rm = TRUE,
+              family = "Source Sans Pro", color = "gray30", size = 1.5) +
+    facet_wrap(~ operatingunit) +
+    scale_x_discrete(breaks = c("FY19Q1", "FY20Q1")) +
+    labs(x = NULL, y = NULL,
+         title = "MULTIPLE MECHANISM SITES NOT EVENLY DISTRIBUTED",
+         subtitle = "share of sites with multiple mechanisms",
+         caption = "OUs ordered by FY20Q3 TX_CURR results
+       Source: DATIM API [2020-09-28]") +
+    si_style_nolines() +
+    theme(plot.title = element_text(face = "bold"),
+          strip.text = element_text(face = "bold", size = 10),
+          panel.grid = element_blank(),
+          axis.text.y = element_blank(),
+          axis.text.x = element_text(size = 9),
+          panel.grid.major.x = element_blank(),
+          panel.spacing = unit(.1, "lines"),
+          plot.caption = element_text(color = "gray30", size = 9))
+```
+
+We can also weight this share, looking at the share of TX_CURR results rather just site count. It paints a very similar picture.
+
+```{r, echo=FALSE}
+ df_viz %>% 
+    ggplot(aes(period, share_result)) +
+    geom_col(aes(y = 1), fill = "gray80", alpha = .7, na.rm = TRUE) +
+    geom_col(fill = "#e34a33", na.rm = TRUE) +
+    geom_hline(aes(yintercept = 0), na.rm = TRUE) +
+    geom_text(aes(label = case_when(share_result > 0 ~ percent(share_result, 1))), 
+              vjust = -.8, na.rm = TRUE,
+              family = "Source Sans Pro", color = "gray30", size = 1.5) +
+    facet_wrap(~ operatingunit) +
+    scale_x_discrete(breaks = c("FY19Q1", "FY20Q1")) +
+    labs(x = NULL, y = NULL,
+         title = "MULTIPLE MECHANISM SITES NOT EVENLY DISTRIBUTED",
+         subtitle = "share of results from multiple mechanisms sites",
+         caption = "OUs ordered by FY20Q3 TX_CURR results
+       Source: DATIM API [2020-09-28]") +
+    si_style_nolines() +
+    theme(plot.title = element_text(face = "bold"),
+          strip.text = element_text(face = "bold", size = 10),
+          panel.grid = element_blank(),
+          axis.text.y = element_blank(),
+          axis.text.x = element_text(size = 9),
+          panel.grid.major.x = element_blank(),
+          panel.spacing = unit(.1, "lines"),
+          plot.caption = element_text(color = "gray30", size = 9))
+```
+
+
+```{r, echo= FALSE}
+
+df_nn_agg <- df_nn %>% 
+  mutate(fundingagency = recode(fundingagency, "HHS/CDC" = "CDC")) %>% 
+  group_by(operatingunit, fundingagency, mech_code, primepartner, period) %>% 
+  summarise(across(c(tx_curr, tx_net_new, tx_net_new_adj_plus), sum, na.rm = TRUE), .groups = "drop") %>% 
+  ungroup()
+
+
+df_nn_agg <- df_nn_agg %>% 
+  group_by(mech_code) %>% 
+  mutate(max_pd = max(period)) %>% 
+  ungroup() %>% 
+  filter(max_pd != min(period))
+# glimpse(df_nn_agg)
+# 
+# df_nn_agg <- df_nn_agg %>% 
+#   gather(indicator, value, tx_net_new, tx_net_new_adj_plus)
+
+df_nn_agg <- df_nn_agg %>%
+  mutate(order = ifelse(period == max_pd, tx_curr, 0),
+         group = glue("{fundingagency} {mech_code} {primepartner}"),
+         group = fct_reorder(group, order, max, .desc = TRUE))
+  
+df_nn_agg %>% 
+  filter(operatingunit == "Tanzania") %>%
+  ggplot(aes(period)) +
+  geom_hline(yintercept = 0) +
+  geom_point(aes(y = tx_net_new_adj_plus, group = mech_code), size = 3, color = "#e34a33") +
+  geom_line(aes(y = tx_net_new_adj_plus, group = mech_code), size = .9, color = "#e34a33") +
+  geom_point(aes(y = tx_net_new, group = mech_code), size = 3, color = "gray50") +
+  geom_line(aes(y = tx_net_new, group = mech_code), size = .9, color = "gray50") +
+  facet_wrap(~group, scale = "free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_discrete(labels = c("FY18Q1", "", "", "",
+                              "FY19Q1", "", "", "",
+                              "FY20Q1", "", "")) +
+  # scale_color_manual(values = c("tx_net_new" = "gray50",
+  #                               "tx_net_new_adj_plus" = "#e34a33"))
+  labs(x = NULL, y = NULL,
+       title = "COMPARING DIFFERNECES IN NET_NEW | TANZANIA",
+       subtitle = "") +
+  si_style()
+
+```
+
+```{r, echo = FALSE}
+
+df_nn_agg <- df_nn %>% 
+  filter(!mech_code %in% c("00000", "00001")) %>% 
+  mutate(fundingagency = recode(fundingagency, "HHS/CDC" = "CDC")) %>% 
+  group_by(operatingunit, fundingagency, mech_code, primepartner, period) %>% 
+  summarise(across(c(tx_curr, tx_net_new, tx_net_new_adj_plus), sum, na.rm = TRUE), .groups = "drop") %>% 
+  ungroup()
+
+
+df_nn_agg <- df_nn_agg %>% 
+  group_by(mech_code) %>% 
+  mutate(max_pd = max(period)) %>% 
+  ungroup() %>% 
+  filter(max_pd != min(period))
+# glimpse(df_nn_agg)
+# 
+# df_nn_agg <- df_nn_agg %>% 
+#   gather(indicator, value, tx_net_new, tx_net_new_adj_plus)
+
+df_nn_agg <- df_nn_agg %>%
+  mutate(order = ifelse(period == max_pd, tx_curr, 0),
+         group = glue("{fundingagency} {mech_code} {primepartner}"),
+         group = fct_reorder(group, order, max, .desc = TRUE))
+
+df_dot <- df_nn_agg %>%
+  filter(str_detect(period, "FY20"),
+         max_pd != "FY20Q1") %>% 
+  group_by(operatingunit, fundingagency, mech_code, primepartner, group) %>% 
+  summarise(across(starts_with("tx_net"), sum, na.rm = TRUE), 
+            order = max(order),
+            .groups = "drop") %>% 
+  ungroup()
+
+df_dot <- df_dot %>% 
+  mutate(delta = tx_net_new_adj_plus - tx_net_new) %>% 
+  pivot_longer(c(tx_net_new, tx_net_new_adj_plus),
+               names_to = "indicator")
+# 
+# df_dot %>% 
+#   filter(delta != 0) %>% 
+#   mutate(group = fct_rev(group)) %>% 
+#   ggplot(aes(value, group, group = group, color = indicator)) + 
+#   geom_path(color = "gray30") +
+#   geom_point() +
+#   scale_x_continuous(label = comma) +
+#   scale_color_manual(values = c("tx_net_new" = "gray30",
+#                                 "tx_net_new_adj_plus" = "#e34a33")) +
+#   si_style()
+#   
+# df_dot %>% 
+#   filter(delta != 0,
+#          fundingagency %in% c("CDC", "USAID")) %>% 
+#   mutate(group = fct_rev(group)) %>% 
+#   ggplot(aes(value, fct_reorder(mech_code, delta), group = mech_code, color = indicator)) + 
+#   geom_path(color = "gray30") +
+#   geom_point() +
+#   facet_wrap(~ fundingagency, scales = "free_y", nrow = 1) +
+#   scale_x_continuous(label = comma) +
+#   scale_color_manual(values = c("tx_net_new" = "gray30",
+#                                 "tx_net_new_adj_plus" = "#e34a33")) +
+#   si_style()
+# 
+# 
+# df_dot %>% 
+#   mutate(group = fct_rev(group)) %>% 
+#   ggplot(aes(value, fct_reorder(mech_code, delta), group = mech_code, color = indicator)) + 
+#   geom_path(color = "gray30") +
+#   geom_point() +
+#   facet_wrap(~ operatingunit, scales = "free") +
+#   scale_x_continuous(label = comma_format(1)) +
+#   scale_color_manual(values = c("tx_net_new" = "gray30",
+#                                 "tx_net_new_adj_plus" = "#e34a33")) +
+#   si_style() +
+#   theme(panel.spacing = unit(1, "lines"))
+
+  
+```
+
+```{r echo= FALSE, fig.height=15, fig.width=9}
+
+df_dot %>% 
+  filter(!mech_code %in% c("00000", "00001")) %>% 
+  mutate(mech_agency = glue("{fundingagency} {mech_code} "),
+         match = case_when(delta == 0 & indicator == "tx_net_new" ~ value)) %>% 
+  ggplot(aes(value, fct_reorder(mech_agency, delta), group = mech_agency, 
+             color = indicator, fill = indicator)) + 
+  geom_blank(aes(x = 0)) +
+  geom_path(color = "gray30") +
+  geom_point(shape = 21) +
+  geom_point(aes(x = match), color = "gray30", na.rm = TRUE) +
+  facet_wrap(~ fct_reorder(operatingunit, order, sum, .desc = TRUE), scales = "free") +
+  scale_x_continuous(label = comma_format(1)) +
+  scale_fill_manual(values = c("tx_net_new" = "white",
+                               "tx_net_new_adj_plus" = "#e34a33")) +
+  scale_color_manual(values = c("tx_net_new" = "gray30",
+                                "tx_net_new_adj_plus" = "#e34a33")) +
+  labs(x = NULL, y = NULL) +
+  si_style_xgrid() +
+  theme(panel.spacing = unit(1, "lines"))
+
+```
+
