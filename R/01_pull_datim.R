@@ -41,7 +41,7 @@ library(glamr)
              "dimension=RUkVjD3BsS1&", #Top Level  - Numerator + Denom
              "displayProperty=SHORTNAME&skipMeta=false&hierarchyMeta=true")
     
-    df <- get_datim_targets(core_url, username, password)
+    df <- get_datim_data(core_url, username, password)
     
     return(df)
   }
